@@ -9,6 +9,29 @@ const DOORS = [
 
 type DoorId = "blue" | "yellow" | "red";
 
+const MOTIVATIONAL_MESSAGES = [
+  { text: "Pedro caiu ao tentar andar sobre as águas, mas Jesus estendeu a mão e o levantou. Levanta e tenta de novo!", ref: "Mateus 14:30-31" },
+  { text: "Tomé duvidou, mas Jesus não desistiu dele. Deus também não desiste de você!", ref: "João 20:27" },
+  { text: "Os discípulos fugiram quando Jesus foi preso, mas depois foram transformados. Recomeçar faz parte da jornada!", ref: "Marcos 14:50" },
+  { text: "Pedro negou Jesus três vezes, mas foi restaurado e se tornou pedra da Igreja. Errar não é o fim!", ref: "João 21:15-17" },
+  { text: "\"Não temas, porque eu sou contigo.\" Deus está com você em cada recomeço!", ref: "Isaías 41:10" },
+  { text: "Zaqueu errou muito, mas quando encontrou Jesus tudo mudou. Um novo começo está sempre disponível!", ref: "Lucas 19:1-10" },
+  { text: "\"Tudo posso naquele que me fortalece.\" Levanta, respira fundo e vai de novo!", ref: "Filipenses 4:13" },
+  { text: "Jesus disse: \"Vinde a mim os cansados e sobrecarregados.\" Ele renova suas forças para tentar outra vez!", ref: "Mateus 11:28" },
+  { text: "Paulo foi perseguidor antes de ser apóstolo. Deus usa quem se levanta depois de cair!", ref: "Atos 9:3-6" },
+  { text: "\"O Senhor é o meu pastor e nada me faltará.\" Confie e avance com coragem!", ref: "Salmo 23:1" },
+  { text: "Os discípulos não entendiam tudo de uma vez. A persistência é parte do aprendizado!", ref: "Marcos 9:32" },
+  { text: "\"Seja forte e corajoso! Não se apavore, pois o Senhor seu Deus está com você.\" Vai com tudo!", ref: "Josué 1:9" },
+  { text: "Maria Madalena chorou diante do túmulo, mas foi a primeira a ver o ressuscitado. Após a queda vem a vitória!", ref: "João 20:11-16" },
+  { text: "\"O amor tudo suporta, tudo espera, tudo persevera.\" Jesus acredita em você!", ref: "1 Coríntios 13:7" },
+  { text: "João, o mais jovem discípulo, nunca desistiu de Jesus. A juventude é força — usa ela para tentar de novo!", ref: "João 19:26" },
+];
+
+function getMotivationalMessage(seed: number) {
+  const idx = Math.abs(seed) % MOTIVATIONAL_MESSAGES.length;
+  return MOTIVATIONAL_MESSAGES[idx];
+}
+
 function seededRandom(seed: number): number {
   const s = ((seed * 1664525 + 1013904223) >>> 0);
   return s / 0xffffffff;
@@ -49,6 +72,7 @@ export default function App() {
   const [chosenDoor, setChosenDoor] = useState<DoorId | null>(null);
   const [showReveal, setShowReveal] = useState(false);
   const [finishedOrder, setFinishedOrder] = useState<string[]>([]);
+  const [motivationalMsg, setMotivationalMsg] = useState<{ text: string; ref: string } | null>(null);
 
   const addPlayer = () => setPlayerNames((p) => [...p, ""]);
   const removePlayer = (i: number) => setPlayerNames((p) => p.filter((_, idx) => idx !== i));
@@ -84,11 +108,18 @@ export default function App() {
 
   const handleDoorClick = useCallback(
     (doorId: DoorId) => {
-      if (showReveal || chosenDoor !== null) return;
+      if (showReveal || chosenDoor !== null || !correctDoor) return;
+      const isWrong = doorId !== correctDoor;
+      if (isWrong) {
+        const seed = Date.now() + doorId.charCodeAt(0);
+        setMotivationalMsg(getMotivationalMessage(seed));
+      } else {
+        setMotivationalMsg(null);
+      }
       setChosenDoor(doorId);
       setShowReveal(true);
     },
-    [showReveal, chosenDoor]
+    [showReveal, chosenDoor, correctDoor]
   );
 
   const handleNext = () => {
@@ -132,6 +163,7 @@ export default function App() {
     setCurrentPlayerIdx(nextIdx < newActive.length ? nextIdx : 0);
     setChosenDoor(null);
     setShowReveal(false);
+    setMotivationalMsg(null);
   };
 
   const resetGame = () => {
@@ -331,7 +363,7 @@ export default function App() {
             {showReveal && (
               <div className="mt-5">
                 <div
-                  className={`rounded-xl p-3 text-center font-bold mb-4 ${
+                  className={`rounded-xl p-3 text-center font-bold mb-3 ${
                     passed
                       ? "bg-green-500/20 text-green-200 border border-green-500/30"
                       : "bg-red-500/20 text-red-200 border border-red-500/30"
@@ -343,6 +375,19 @@ export default function App() {
                       : `🎉 Acertou! Avança para o nível ${currentPlayer.currentLevel + 1}!`
                     : `😬 Errou! ${currentPlayer.name} volta ao nível 1!`}
                 </div>
+
+                {!passed && motivationalMsg && (
+                  <div className="rounded-xl p-4 mb-4 bg-amber-500/10 border border-amber-400/30">
+                    <div className="flex gap-2 items-start">
+                      <span className="text-xl flex-shrink-0">✝️</span>
+                      <div>
+                        <p className="text-amber-100 text-sm leading-relaxed italic">"{motivationalMsg.text}"</p>
+                        <p className="text-amber-400/80 text-xs mt-1.5 font-semibold">{motivationalMsg.ref}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={handleNext}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold text-base shadow-lg transition"
