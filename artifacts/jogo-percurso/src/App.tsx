@@ -221,6 +221,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex flex-col items-center justify-center p-4 gap-5">
         <div className="w-full max-w-lg">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-purple-300 text-xs font-semibold uppercase tracking-wider">Jogo das Portas</span>
+            <button
+              onClick={resetGame}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white text-xs font-semibold transition"
+            >
+              🔄 Reiniciar
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2 justify-center mb-4">
             {players.map((p) => (
               <div
