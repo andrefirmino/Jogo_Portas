@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Jogo de Percurso"
+version = "1.0.0"
+id = "artifacts/jogo-percurso"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 19447
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/jogo-percurso run dev"
+
+[services.env]
+PORT = "19447"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/jogo-percurso", "run", "build"]
+publicDir = "artifacts/jogo-percurso/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
