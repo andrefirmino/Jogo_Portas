@@ -625,7 +625,13 @@ function nextTurn() {
     return;
   }
 
-  currentPlayerIdx = currentPlayerIdx % active.length;
+  if (justFinished) {
+    // jogador foi removido da lista ativa, o índice já aponta para o próximo
+    currentPlayerIdx = currentPlayerIdx % active.length;
+  } else {
+    // jogador ainda está na lista, avança para o próximo
+    currentPlayerIdx = (currentPlayerIdx + 1) % active.length;
+  }
   renderPlayingScreen();
 }
 
