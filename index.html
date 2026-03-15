@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo das Portas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .screen { display: none; width: 100%; max-width: 480px; }
+    .screen.active { display: block; }
+
+    /* ---- CARD ---- */
+    .card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      backdrop-filter: blur(8px);
+    }
+
+    /* ---- TYPOGRAPHY ---- */
+    h1 { font-size: 2rem; font-weight: 900; text-align: center; margin-bottom: .25rem; }
+    h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+    .subtitle { text-align: center; color: #c4b5fd; font-size: .875rem; margin-bottom: 1.5rem; }
+    .label { font-size: .8rem; font-weight: 700; color: #e9d5ff; margin-bottom: .5rem; display: block; }
+
+    /* ---- BUTTONS ---- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: .5rem; padding: .75rem 1.25rem; border-radius: .875rem;
+      font-size: 1rem; font-weight: 700; cursor: pointer; border: none;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      color: #fff; font-size: 1.1rem; padding: .875rem;
+      box-shadow: 0 4px 20px rgba(139,92,246,.35);
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,0.1); color: rgba(255,255,255,.75);
+      border: 1px solid rgba(255,255,255,.18);
+      font-size: .8rem; padding: .4rem .75rem; border-radius: .5rem;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.18); color: #fff; }
+    .btn-icon {
+      width: 2.25rem; height: 2.25rem; border-radius: .625rem;
+      background: rgba(255,255,255,.12); color: #fff;
+      font-size: 1.2rem; font-weight: 900;
+      border: none; cursor: pointer; transition: background .15s;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,.25); }
+
+    /* ---- SETUP ---- */
+    .door-preview {
+      display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .door-preview-item {
+      width: 4rem; height: 5rem; border-radius: .875rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    }
+    .door-preview-item.blue  { background: linear-gradient(160deg, #3b82f6, #1d4ed8); }
+    .door-preview-item.yellow{ background: linear-gradient(160deg, #facc15, #ca8a04); }
+    .door-preview-item.red   { background: linear-gradient(160deg, #ef4444, #b91c1c); }
+
+    /* level selector */
+    .level-selector {
+      display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem;
+    }
+    .level-value { flex: 1; text-align: center; }
+    .level-value span:first-child { font-size: 2.25rem; font-weight: 900; }
+    .level-value span:last-child  { font-size: .875rem; color: #c4b5fd; margin-left: .25rem; }
+    .level-presets { display: flex; justify-content: space-between; gap: .25rem; margin-bottom: 1.25rem; }
+    .level-preset {
+      flex: 1; padding: .3rem 0; border-radius: .5rem; font-size: .75rem;
+      font-weight: 700; cursor: pointer; border: none; transition: background .15s, color .15s;
+      background: rgba(255,255,255,.1); color: #c4b5fd;
+    }
+    .level-preset:hover { background: rgba(255,255,255,.2); color: #fff; }
+    .level-preset.active { background: #7c3aed; color: #fff; }
+
+    /* players */
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,.12); margin: 1.25rem 0; }
+    .player-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .625rem; }
+    .player-num {
+      width: 2rem; height: 2rem; border-radius: 50%; background: #7c3aed;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; flex-shrink: 0;
+    }
+    .player-input {
+      flex: 1; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+      border-radius: .75rem; padding: .5rem 1rem; color: #fff; font-size: .9rem;
+      outline: none; transition: border-color .15s;
+    }
+    .player-input::placeholder { color: #a78bfa; }
+    .player-input:focus { border-color: rgba(255,255,255,.55); }
+    .btn-remove {
+      width: 2rem; height: 2rem; border-radius: 50%; background: rgba(239,68,68,.35);
+      color: #fff; border: none; cursor: pointer; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .btn-remove:hover { background: rgba(239,68,68,.65); }
+    .btn-add-player {
+      width: 100%; padding: .5rem; border-radius: .75rem;
+      border: 2px dashed rgba(255,255,255,.25); background: none;
+      color: #c4b5fd; font-size: .875rem; font-weight: 600;
+      cursor: pointer; transition: border-color .15s, color .15s; margin-bottom: 1.25rem;
+    }
+    .btn-add-player:hover { border-color: rgba(255,255,255,.55); color: #fff; }
+
+    /* ---- PLAYING ---- */
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: .75rem;
+    }
+    .top-bar-label { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: #a78bfa; }
+
+    .player-chips { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-bottom: .75rem; }
+    .chip {
+      padding: .3rem .75rem; border-radius: 999px; font-size: .72rem;
+      font-weight: 700; display: flex; align-items: center; gap: .35rem;
+      border: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.5);
+      background: rgba(255,255,255,.05);
+    }
+    .chip.current { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.5); color: #fff; }
+    .chip.done    { background: rgba(250,204,21,.1); border-color: rgba(250,204,21,.4); color: #fde68a; }
+
+    .player-turn { text-align: center; margin-bottom: 1.25rem; }
+    .player-turn .who { font-size: .8rem; color: #c4b5fd; margin-bottom: .25rem; }
+    .player-turn .name { font-size: 1.5rem; font-weight: 900; }
+
+    .level-track { display: flex; gap: 3px; margin: .6rem 0; justify-content: center; }
+    .level-cell {
+      height: 1.25rem; border-radius: .25rem; flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .6rem; font-weight: 700;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.35);
+      transition: background .3s;
+    }
+    .level-cell.past    { background: #22c55e; color: #fff; }
+    .level-cell.current { background: #fff; color: #1e1b4b; }
+    .level-info { text-align: center; font-size: .75rem; font-weight: 700; color: #c4b5fd; margin-bottom: 1rem; }
+
+    .doors-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-bottom: 0; }
+    .door-btn {
+      border: 2px solid transparent; border-radius: 1rem; overflow: hidden;
+      cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .2s, opacity .2s;
+      background: none; position: relative;
+    }
+    .door-btn:not(:disabled):hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .door-btn:not(:disabled):active { transform: scale(.96); }
+    .door-btn:disabled { cursor: default; }
+    .door-inner { padding: 1.25rem .5rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+    .door-inner .door-icon { font-size: 3rem; }
+    .door-inner .door-label { font-size: .875rem; font-weight: 700; color: #fff; }
+    .door-btn.blue-door  .door-inner { background: linear-gradient(160deg, #3b82f6, #1d4ed8); }
+    .door-btn.yellow-door .door-inner { background: linear-gradient(160deg, #facc15, #ca8a04); }
+    .door-btn.red-door   .door-inner { background: linear-gradient(160deg, #ef4444, #b91c1c); }
+    .door-btn.blue-door  { border-color: #60a5fa; }
+    .door-btn.yellow-door{ border-color: #fde047; }
+    .door-btn.red-door   { border-color: #f87171; }
+    .door-overlay {
+      position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; font-size: 2.5rem;
+    }
+    .door-overlay.correct { background: rgba(34,197,94,.4); }
+    .door-overlay.wrong   { background: rgba(239,68,68,.4); }
+    .door-btn.dim { opacity: .35; }
+    .door-btn.winner { border-color: #4ade80 !important; }
+    .door-btn.loser  { border-color: #f87171 !important; }
+
+    /* ---- FEEDBACK ---- */
+    .feedback { margin-top: 1rem; display: none; }
+    .feedback.visible { display: block; }
+    .feedback-banner {
+      border-radius: .875rem; padding: .75rem 1rem; text-align: center;
+      font-weight: 700; font-size: .95rem; margin-bottom: .75rem;
+    }
+    .feedback-banner.success { background: rgba(34,197,94,.18); border: 1px solid rgba(34,197,94,.35); color: #bbf7d0; }
+    .feedback-banner.fail    { background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.35); color: #fecaca; }
+
+    .motivational {
+      background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3);
+      border-radius: .875rem; padding: 1rem; margin-bottom: .75rem;
+      display: flex; gap: .75rem; align-items: flex-start;
+    }
+    .motivational .cross { font-size: 1.25rem; flex-shrink: 0; margin-top: .1rem; }
+    .motivational p { font-style: italic; font-size: .85rem; line-height: 1.55; color: #fef3c7; }
+    .motivational .ref { font-size: .75rem; font-weight: 700; color: rgba(251,191,36,.7); margin-top: .4rem; }
+
+    /* ---- RESULTS ---- */
+    .result-header { text-align: center; margin-bottom: 1.5rem; }
+    .result-header .trophy { font-size: 3.5rem; }
+    .result-header h1 { font-size: 1.75rem; }
+    .result-header p  { color: #c4b5fd; font-size: .875rem; }
+
+    .result-item {
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 1rem; padding: 1rem; margin-bottom: .625rem;
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .result-item.gold { background: rgba(250,204,21,.06); border-color: rgba(250,204,21,.35); }
+    .result-medal { font-size: 1.75rem; flex-shrink: 0; }
+    .result-info { flex: 1; }
+    .result-name { font-weight: 700; font-size: 1.05rem; }
+    .result-stats { font-size: .75rem; color: #a78bfa; margin-top: .2rem; }
+    .result-badge {
+      font-size: .75rem; font-weight: 700; padding: .25rem .6rem;
+      border-radius: .5rem; white-space: nowrap;
+    }
+    .result-badge.done   { background: rgba(34,197,94,.2); color: #86efac; }
+    .result-badge.nodone { background: rgba(139,92,246,.2); color: #c4b5fd; }
+  </style>
+</head>
+<body>
+
+<!-- ===================== SETUP ===================== -->
+<div id="screen-setup" class="screen active">
+  <div style="text-align:center; margin-bottom:1.5rem;">
+    <div style="font-size:3.5rem; margin-bottom:.5rem;">🚪</div>
+    <h1>Jogo das Portas</h1>
+    <p class="subtitle">Escolha a porta certa e suba os níveis!<br>Errou? Volta ao 1.</p>
+  </div>
+
+  <div class="door-preview">
+    <div class="door-preview-item blue">🚪</div>
+    <div class="door-preview-item yellow">🚪</div>
+    <div class="door-preview-item red">🚪</div>
+  </div>
+
+  <div class="card">
+    <label class="label">🏆 Quantidade de Níveis</label>
+    <div class="level-selector">
+      <button class="btn-icon" id="btn-level-minus">−</button>
+      <div class="level-value">
+        <span id="level-display">10</span>
+        <span>níveis</span>
+      </div>
+      <button class="btn-icon" id="btn-level-plus">+</button>
+    </div>
+    <div class="level-presets" id="level-presets">
+      <button class="level-preset" data-v="3">3</button>
+      <button class="level-preset" data-v="5">5</button>
+      <button class="level-preset" data-v="7">7</button>
+      <button class="level-preset active" data-v="10">10</button>
+      <button class="level-preset" data-v="15">15</button>
+      <button class="level-preset" data-v="20">20</button>
+    </div>
+
+    <hr class="divider">
+
+    <h2>👥 Jogadores</h2>
+    <div id="players-list"></div>
+    <button class="btn-add-player" id="btn-add-player">+ Adicionar jogador</button>
+    <button class="btn btn-primary" id="btn-start">🚀 Iniciar Jogo</button>
+  </div>
+</div>
+
+<!-- ===================== PLAYING ===================== -->
+<div id="screen-playing" class="screen">
+  <div class="top-bar">
+    <span class="top-bar-label">Jogo das Portas</span>
+    <button class="btn btn-ghost" id="btn-restart-playing">🔄 Reiniciar</button>
+  </div>
+
+  <div class="player-chips" id="player-chips"></div>
+
+  <div class="card">
+    <div class="player-turn">
+      <div class="who">Vez de</div>
+      <div class="name" id="current-player-name"></div>
+    </div>
+
+    <div class="level-track" id="level-track"></div>
+    <div class="level-info" id="level-info"></div>
+
+    <p style="text-align:center; font-size:.85rem; color:rgba(255,255,255,.6); margin-bottom:1.25rem; font-weight:600;">
+      🚪 Escolha uma porta para continuar...
+    </p>
+
+    <div class="doors-grid" id="doors-grid">
+      <button class="door-btn blue-door" data-door="blue">
+        <div class="door-inner">
+          <span class="door-icon">🚪</span>
+          <span class="door-label">Azul</span>
+        </div>
+      </button>
+      <button class="door-btn yellow-door" data-door="yellow">
+        <div class="door-inner">
+          <span class="door-icon">🚪</span>
+          <span class="door-label">Amarela</span>
+        </div>
+      </button>
+      <button class="door-btn red-door" data-door="red">
+        <div class="door-inner">
+          <span class="door-icon">🚪</span>
+          <span class="door-label">Vermelha</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <div class="feedback-banner" id="feedback-banner"></div>
+      <div class="motivational" id="motivational" style="display:none;">
+        <span class="cross">✝️</span>
+        <div>
+          <p id="motivational-text"></p>
+          <div class="ref" id="motivational-ref"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-next">Próxima Vez →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== RESULTS ===================== -->
+<div id="screen-results" class="screen">
+  <div class="result-header">
+    <div class="trophy">🏆</div>
+    <h1>Resultado Final</h1>
+    <p>Parabéns a todos!</p>
+  </div>
+  <div id="results-list"></div>
+  <button class="btn btn-primary" id="btn-restart-results" style="margin-top:.5rem;">🔄 Jogar Novamente</button>
+</div>
+
+<script>
+// ===================== DATA =====================
+const MOTIVATIONAL_MESSAGES = [
+  { text: "Pedro caiu ao tentar andar sobre as águas, mas Jesus estendeu a mão e o levantou. Levanta e tenta de novo!", ref: "Mateus 14:30-31" },
+  { text: "Tomé duvidou, mas Jesus não desistiu dele. Deus também não desiste de você!", ref: "João 20:27" },
+  { text: "Os discípulos fugiram quando Jesus foi preso, mas depois foram transformados. Recomeçar faz parte da jornada!", ref: "Marcos 14:50" },
+  { text: "Pedro negou Jesus três vezes, mas foi restaurado e se tornou pedra da Igreja. Errar não é o fim!", ref: "João 21:15-17" },
+  { text: '"Não temas, porque eu sou contigo." Deus está com você em cada recomeço!', ref: "Isaías 41:10" },
+  { text: "Zaqueu errou muito, mas quando encontrou Jesus tudo mudou. Um novo começo está sempre disponível!", ref: "Lucas 19:1-10" },
+  { text: '"Tudo posso naquele que me fortalece." Levanta, respira fundo e vai de novo!', ref: "Filipenses 4:13" },
+  { text: 'Jesus disse: "Vinde a mim os cansados e sobrecarregados." Ele renova suas forças para tentar outra vez!', ref: "Mateus 11:28" },
+  { text: "Paulo foi perseguidor antes de ser apóstolo. Deus usa quem se levanta depois de cair!", ref: "Atos 9:3-6" },
+  { text: '"O Senhor é o meu pastor e nada me faltará." Confie e avance com coragem!', ref: "Salmo 23:1" },
+  { text: "Os discípulos não entendiam tudo de uma vez. A persistência é parte do aprendizado!", ref: "Marcos 9:32" },
+  { text: '"Seja forte e corajoso! Não se apavore, pois o Senhor seu Deus está com você." Vai com tudo!', ref: "Josué 1:9" },
+  { text: "Maria Madalena chorou diante do túmulo, mas foi a primeira a ver o ressuscitado. Após a queda vem a vitória!", ref: "João 20:11-16" },
+  { text: '"O amor tudo suporta, tudo espera, tudo persevera." Jesus acredita em você!', ref: "1 Coríntios 13:7" },
+  { text: "João, o mais jovem discípulo, nunca desistiu de Jesus. A juventude é força — usa ela para tentar de novo!", ref: "João 19:26" },
+];
+
+const DOORS = ["blue", "yellow", "red"];
+const MAX_LEVELS = 20;
+
+// ===================== STATE =====================
+let totalLevels = 10;
+let playerNames = [""];
+let players = [];
+let currentPlayerIdx = 0;
+let chosenDoor = null;
+let revealed = false;
+let finishedOrder = [];
+
+// ===================== UTILS =====================
+function seededRand(seed) {
+  return ((seed * 1664525 + 1013904223) >>> 0) / 0xffffffff;
+}
+
+function generateDoors(name, idx, levels) {
+  const nameSeed = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const base = nameSeed * 31 + idx * 997 + 12345;
+  return Array.from({ length: levels }, (_, i) => {
+    const r = seededRand(base + i * 7919);
+    return DOORS[Math.floor(r * 3)];
+  });
+}
+
+function getMotivational(seed) {
+  return MOTIVATIONAL_MESSAGES[Math.abs(seed) % MOTIVATIONAL_MESSAGES.length];
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+// ===================== SETUP SCREEN =====================
+function renderPlayersList() {
+  const list = document.getElementById("players-list");
+  list.innerHTML = "";
+  playerNames.forEach((name, i) => {
+    const row = document.createElement("div");
+    row.className = "player-row";
+    row.innerHTML = `
+      <div class="player-num">${i + 1}</div>
+      <input class="player-input" type="text" placeholder="Nome do jogador ${i + 1}" value="${escHtml(name)}" data-idx="${i}" />
+      ${playerNames.length > 1 ? `<button class="btn-remove" data-idx="${i}">✕</button>` : ""}
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll(".player-input").forEach(inp => {
+    inp.addEventListener("input", e => {
+      playerNames[+e.target.dataset.idx] = e.target.value;
+      updateStartBtn();
+    });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") addPlayer(); });
+  });
+  list.querySelectorAll(".btn-remove").forEach(btn => {
+    btn.addEventListener("click", e => removePlayer(+e.currentTarget.dataset.idx));
+  });
+  updateStartBtn();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function addPlayer() {
+  playerNames.push("");
+  renderPlayersList();
+}
+
+function removePlayer(i) {
+  playerNames.splice(i, 1);
+  renderPlayersList();
+}
+
+function updateStartBtn() {
+  const valid = playerNames.some(n => n.trim());
+  document.getElementById("btn-start").disabled = !valid;
+}
+
+function updateLevelDisplay() {
+  document.getElementById("level-display").textContent = totalLevels;
+  document.querySelectorAll(".level-preset").forEach(btn => {
+    btn.classList.toggle("active", +btn.dataset.v === totalLevels);
+  });
+}
+
+document.getElementById("btn-level-minus").addEventListener("click", () => {
+  totalLevels = Math.max(2, totalLevels - 1);
+  updateLevelDisplay();
+});
+document.getElementById("btn-level-plus").addEventListener("click", () => {
+  totalLevels = Math.min(MAX_LEVELS, totalLevels + 1);
+  updateLevelDisplay();
+});
+document.getElementById("level-presets").addEventListener("click", e => {
+  const btn = e.target.closest(".level-preset");
+  if (!btn) return;
+  totalLevels = +btn.dataset.v;
+  updateLevelDisplay();
+});
+document.getElementById("btn-add-player").addEventListener("click", addPlayer);
+document.getElementById("btn-start").addEventListener("click", startGame);
+
+// ===================== GAME LOGIC =====================
+function startGame() {
+  const valid = playerNames.map(n => n.trim()).filter(Boolean);
+  if (!valid.length) return;
+  players = valid.map((name, i) => ({
+    name,
+    currentLevel: 1,
+    doorSequence: generateDoors(name, i, totalLevels),
+    finished: false,
+    history: [],
+  }));
+  finishedOrder = [];
+  currentPlayerIdx = 0;
+  chosenDoor = null;
+  revealed = false;
+  renderPlayingScreen();
+  showScreen("screen-playing");
+}
+
+function activePlayers() { return players.filter(p => !p.finished); }
+function currentPlayer() { return activePlayers()[currentPlayerIdx] || null; }
+function correctDoor() {
+  const p = currentPlayer();
+  return p ? p.doorSequence[p.currentLevel - 1] : null;
+}
+
+function renderPlayingScreen() {
+  const p = currentPlayer();
+  if (!p) return;
+
+  // chips
+  const chips = document.getElementById("player-chips");
+  chips.innerHTML = players.map(pl => {
+    const isCurrent = !pl.finished && pl.name === p.name;
+    const cls = pl.finished ? "chip done" : isCurrent ? "chip current" : "chip";
+    const icon = pl.finished ? "🏆" : `Nv.${pl.currentLevel}`;
+    return `<div class="${cls}"><span>${icon}</span><span>${escHtml(pl.name)}</span></div>`;
+  }).join("");
+
+  // current player name
+  document.getElementById("current-player-name").textContent = p.name;
+
+  // level track
+  const track = document.getElementById("level-track");
+  track.innerHTML = Array.from({ length: totalLevels }, (_, i) => {
+    let cls = "level-cell";
+    if (i + 1 < p.currentLevel) cls += " past";
+    else if (i + 1 === p.currentLevel) cls += " current";
+    return `<div class="${cls}">${i + 1}</div>`;
+  }).join("");
+  document.getElementById("level-info").textContent = `Nível ${p.currentLevel} de ${totalLevels}`;
+
+  // doors — reset state
+  document.querySelectorAll(".door-btn").forEach(btn => {
+    btn.disabled = false;
+    btn.classList.remove("dim", "winner", "loser");
+    const overlay = btn.querySelector(".door-overlay");
+    if (overlay) overlay.remove();
+  });
+
+  // feedback hidden
+  const feedback = document.getElementById("feedback");
+  feedback.classList.remove("visible");
+  document.getElementById("motivational").style.display = "none";
+  chosenDoor = null;
+  revealed = false;
+}
+
+document.getElementById("doors-grid").addEventListener("click", e => {
+  const btn = e.target.closest(".door-btn");
+  if (!btn || revealed) return;
+  chooseDoor(btn.dataset.door);
+});
+
+function chooseDoor(door) {
+  if (revealed) return;
+  chosenDoor = door;
+  revealed = true;
+  const correct = correctDoor();
+  const passed = door === correct;
+
+  // style doors
+  document.querySelectorAll(".door-btn").forEach(btn => {
+    const d = btn.dataset.door;
+    if (d === correct) {
+      btn.classList.add("winner");
+      addOverlay(btn, "correct", "✓");
+    } else if (d === door && !passed) {
+      btn.classList.add("loser");
+      addOverlay(btn, "wrong", "✗");
+    } else {
+      btn.classList.add("dim");
+    }
+    btn.disabled = true;
+  });
+
+  // feedback banner
+  const banner = document.getElementById("feedback-banner");
+  const p = currentPlayer();
+  if (passed) {
+    if (p.currentLevel === totalLevels) {
+      banner.textContent = `🏆 ${p.name} completou todos os níveis!`;
+    } else {
+      banner.textContent = `🎉 Acertou! Avança para o nível ${p.currentLevel + 1}!`;
+    }
+    banner.className = "feedback-banner success";
+  } else {
+    banner.textContent = `😬 Errou! ${p.name} volta ao nível 1!`;
+    banner.className = "feedback-banner fail";
+    const msg = getMotivational(Date.now() + door.charCodeAt(0));
+    document.getElementById("motivational-text").textContent = `"${msg.text}"`;
+    document.getElementById("motivational-ref").textContent = msg.ref;
+    document.getElementById("motivational").style.display = "flex";
+  }
+
+  // next button label
+  const active = activePlayers();
+  const justDone = passed && p.currentLevel === totalLevels;
+  const newActive = justDone ? active.filter(x => x.name !== p.name) : active;
+  document.getElementById("btn-next").textContent =
+    newActive.length === 0 ? "Ver Resultados 🏆" : "Próxima Vez →";
+
+  document.getElementById("feedback").classList.add("visible");
+}
+
+function addOverlay(btn, cls, icon) {
+  const ov = document.createElement("div");
+  ov.className = `door-overlay ${cls}`;
+  ov.textContent = icon;
+  btn.appendChild(ov);
+}
+
+document.getElementById("btn-next").addEventListener("click", nextTurn);
+
+function nextTurn() {
+  const p = currentPlayer();
+  if (!p) return;
+  const passed = chosenDoor === correctDoor();
+
+  const histEntry = { level: p.currentLevel, chose: chosenDoor, correct: correctDoor(), passed };
+  p.history.push(histEntry);
+
+  const justFinished = passed && p.currentLevel === totalLevels;
+  if (justFinished) {
+    p.finished = true;
+    finishedOrder.push(p.name);
+  } else {
+    p.currentLevel = passed ? p.currentLevel + 1 : 1;
+  }
+
+  const active = activePlayers();
+  if (active.length === 0) {
+    renderResults();
+    showScreen("screen-results");
+    return;
+  }
+
+  currentPlayerIdx = currentPlayerIdx % active.length;
+  renderPlayingScreen();
+}
+
+// ===================== RESULTS =====================
+function renderResults() {
+  const sorted = [...players].sort((a, b) => {
+    const ai = finishedOrder.indexOf(a.name);
+    const bi = finishedOrder.indexOf(b.name);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return b.currentLevel - a.currentLevel;
+  });
+
+  const medals = ["🥇", "🥈", "🥉"];
+  document.getElementById("results-list").innerHTML = sorted.map((p, i) => {
+    const medal = medals[i] || "🏅";
+    const correct = p.history.filter(h => h.passed).length;
+    const total   = p.history.length;
+    const badgeCls = p.finished ? "done" : "nodone";
+    const badgeTxt = p.finished ? "✅ Concluído!" : `Nível ${p.currentLevel}`;
+    return `
+      <div class="result-item ${i === 0 ? "gold" : ""}">
+        <span class="result-medal">${medal}</span>
+        <div class="result-info">
+          <div class="result-name">${escHtml(p.name)}</div>
+          <div class="result-stats">${correct} acerto(s) em ${total} tentativa(s)</div>
+        </div>
+        <span class="result-badge ${badgeCls}">${badgeTxt}</span>
+      </div>`;
+  }).join("");
+}
+
+// ===================== RESTART =====================
+function resetGame() {
+  playerNames = [""];
+  totalLevels = 10;
+  updateLevelDisplay();
+  renderPlayersList();
+  showScreen("screen-setup");
+}
+
+document.getElementById("btn-restart-playing").addEventListener("click", resetGame);
+document.getElementById("btn-restart-results").addEventListener("click", resetGame);
+
+// ===================== INIT =====================
+renderPlayersList();
+updateLevelDisplay();
+</script>
+</body>
+</html>
