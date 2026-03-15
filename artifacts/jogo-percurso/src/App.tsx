@@ -14,10 +14,10 @@ function seededRandom(seed: number): number {
   return s / 0xffffffff;
 }
 
-function generatePlayerDoors(name: string, playerIndex: number, count: number): DoorId[] {
+function generatePlayerDoors(name: string, playerIndex: number): DoorId[] {
   const nameSeed = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const base = nameSeed * 31 + playerIndex * 997 + 12345;
-  return Array.from({ length: count }, (_, i) => {
+  return Array.from({ length: TOTAL_LEVELS }, (_, i) => {
     const r = seededRandom(base + i * 7919);
     const idx = Math.floor(r * 3);
     return DOORS[idx].id as DoorId;
@@ -28,7 +28,6 @@ interface Player {
   name: string;
   currentLevel: number;
   doorSequence: DoorId[];
-  doorIndex: number;
   finished: boolean;
   history: { level: number; chose: DoorId; correct: DoorId; passed: boolean }[];
 }
@@ -62,8 +61,7 @@ export default function App() {
     const newPlayers: Player[] = validNames.map((name, i) => ({
       name,
       currentLevel: 1,
-      doorSequence: generatePlayerDoors(name, i, 200),
-      doorIndex: 0,
+      doorSequence: generatePlayerDoors(name, i),
       finished: false,
       history: [],
     }));
@@ -82,7 +80,7 @@ export default function App() {
     : -1;
 
   const correctDoor: DoorId | null =
-    currentPlayer ? currentPlayer.doorSequence[currentPlayer.doorIndex] : null;
+    currentPlayer ? currentPlayer.doorSequence[currentPlayer.currentLevel - 1] : null;
 
   const handleDoorClick = useCallback(
     (doorId: DoorId) => {
@@ -103,7 +101,6 @@ export default function App() {
     ];
 
     const newLevel = passed ? currentPlayer.currentLevel + 1 : 1;
-    const newDoorIndex = currentPlayer.doorIndex + 1;
     const justFinished = passed && currentPlayer.currentLevel === TOTAL_LEVELS;
 
     const updatedPlayers = players.map((p) => {
@@ -111,7 +108,6 @@ export default function App() {
       return {
         ...p,
         currentLevel: justFinished ? TOTAL_LEVELS : newLevel,
-        doorIndex: newDoorIndex,
         finished: justFinished,
         history: newHistory,
       };
