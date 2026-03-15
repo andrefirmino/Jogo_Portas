@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-const TOTAL_LEVELS = 10;
+const MAX_LEVELS = 20;
 const DOORS = [
   { id: "blue", label: "Azul", emoji: "🔵", bg: "from-blue-500 to-blue-700", border: "border-blue-400", glow: "shadow-blue-500/60" },
   { id: "yellow", label: "Amarela", emoji: "🟡", bg: "from-yellow-400 to-yellow-600", border: "border-yellow-300", glow: "shadow-yellow-400/60" },
@@ -37,10 +37,10 @@ function seededRandom(seed: number): number {
   return s / 0xffffffff;
 }
 
-function generatePlayerDoors(name: string, playerIndex: number): DoorId[] {
+function generatePlayerDoors(name: string, playerIndex: number, levels: number): DoorId[] {
   const nameSeed = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const base = nameSeed * 31 + playerIndex * 997 + 12345;
-  return Array.from({ length: TOTAL_LEVELS }, (_, i) => {
+  return Array.from({ length: levels }, (_, i) => {
     const r = seededRandom(base + i * 7919);
     const idx = Math.floor(r * 3);
     return DOORS[idx].id as DoorId;
@@ -67,6 +67,7 @@ function Medal({ rank }: { rank: number }) {
 export default function App() {
   const [phase, setPhase] = useState<GamePhase>("setup");
   const [playerNames, setPlayerNames] = useState<string[]>([""]);
+  const [totalLevels, setTotalLevels] = useState(10);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayerIdx, setCurrentPlayerIdx] = useState(0);
   const [chosenDoor, setChosenDoor] = useState<DoorId | null>(null);
@@ -85,7 +86,7 @@ export default function App() {
     const newPlayers: Player[] = validNames.map((name, i) => ({
       name,
       currentLevel: 1,
-      doorSequence: generatePlayerDoors(name, i),
+      doorSequence: generatePlayerDoors(name, i, totalLevels),
       finished: false,
       history: [],
     }));
@@ -132,13 +133,13 @@ export default function App() {
     ];
 
     const newLevel = passed ? currentPlayer.currentLevel + 1 : 1;
-    const justFinished = passed && currentPlayer.currentLevel === TOTAL_LEVELS;
+    const justFinished = passed && currentPlayer.currentLevel === totalLevels;
 
     const updatedPlayers = players.map((p) => {
       if (p.name !== currentPlayer.name) return p;
       return {
         ...p,
-        currentLevel: justFinished ? TOTAL_LEVELS : newLevel,
+        currentLevel: justFinished ? totalLevels : newLevel,
         finished: justFinished,
         history: newHistory,
       };
@@ -184,7 +185,7 @@ export default function App() {
             <div className="text-6xl mb-3">🚪</div>
             <h1 className="text-4xl font-extrabold text-white mb-2">Jogo das Portas</h1>
             <p className="text-purple-300 text-sm">
-              Escolha a porta certa e suba os {TOTAL_LEVELS} níveis! Errou? Volta ao 1.
+              Escolha a porta certa e suba os níveis! Errou? Volta ao 1.
             </p>
           </div>
 
@@ -200,6 +201,39 @@ export default function App() {
           </div>
 
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-white/20">
+            <div className="mb-5">
+              <label className="text-white font-bold text-sm block mb-2">🏆 Quantidade de Níveis</label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setTotalLevels((v) => Math.max(2, v - 1))}
+                  className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/30 text-white font-bold text-lg transition flex items-center justify-center"
+                >−</button>
+                <div className="flex-1 text-center">
+                  <span className="text-3xl font-extrabold text-white">{totalLevels}</span>
+                  <span className="text-purple-300 text-sm ml-1">níveis</span>
+                </div>
+                <button
+                  onClick={() => setTotalLevels((v) => Math.min(MAX_LEVELS, v + 1))}
+                  className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/30 text-white font-bold text-lg transition flex items-center justify-center"
+                >+</button>
+              </div>
+              <div className="flex justify-between mt-2 px-1">
+                {[3, 5, 7, 10, 15, 20].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setTotalLevels(n)}
+                    className={`text-xs px-2 py-1 rounded-lg font-semibold transition ${
+                      totalLevels === n
+                        ? "bg-purple-500 text-white"
+                        : "bg-white/10 text-purple-300 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >{n}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-white/15 mb-5" />
+
             <h2 className="text-white font-bold text-lg mb-4">👥 Jogadores</h2>
             <div className="space-y-3 mb-4">
               {playerNames.map((name, i) => (
@@ -289,7 +323,7 @@ export default function App() {
 
               <div className="flex items-center justify-center gap-2 mt-3">
                 <div className="flex gap-1">
-                  {Array.from({ length: TOTAL_LEVELS }).map((_, i) => (
+                  {Array.from({ length: totalLevels }).map((_, i) => (
                     <div
                       key={i}
                       className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
@@ -306,7 +340,7 @@ export default function App() {
                 </div>
               </div>
               <p className="text-purple-300 text-xs mt-2 font-semibold">
-                Nível {currentPlayer.currentLevel} de {TOTAL_LEVELS}
+                Nível {currentPlayer.currentLevel} de {totalLevels}
               </p>
             </div>
 
@@ -370,7 +404,7 @@ export default function App() {
                   }`}
                 >
                   {passed
-                    ? currentPlayer.currentLevel === TOTAL_LEVELS
+                    ? currentPlayer.currentLevel === totalLevels
                       ? `🏆 ${currentPlayer.name} completou todos os níveis!`
                       : `🎉 Acertou! Avança para o nível ${currentPlayer.currentLevel + 1}!`
                     : `😬 Errou! ${currentPlayer.name} volta ao nível 1!`}
@@ -392,7 +426,7 @@ export default function App() {
                   onClick={handleNext}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold text-base shadow-lg transition"
                 >
-                  {activePlayers.length === 1 && passed && currentPlayer.currentLevel === TOTAL_LEVELS
+                  {activePlayers.length === 1 && passed && currentPlayer.currentLevel === totalLevels
                     ? "Ver Resultados 🏆"
                     : "Próxima Vez →"}
                 </button>
